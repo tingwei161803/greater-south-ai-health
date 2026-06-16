@@ -10,9 +10,9 @@
 
 | | |
 |---|---|
-| 🌐 網站 | <https://tingwei161803.github.io/greater-south-ai-health/> |
+| 🌐 網站 | <https://greater-south-ai-health.peteraim.com/> |
 
-> 直接點進去就能用，無需安裝。各頁面皆有獨立網址；參展業者頁可用 `exhibitors.html#<slug>`（如 `#home-2`）深連結到特定廠商，或用 `exhibitors.html#zone=clinic` 直接套用展區篩選。
+> 直接點進去就能用，無需安裝。各頁面皆有獨立網址；參展業者頁可用 `https://greater-south-ai-health.peteraim.com/exhibitors.html#<slug>`（如 `#home-2`）深連結到特定廠商，或用 `exhibitors.html#zone=clinic` 直接套用展區篩選。
 
 ---
 
