@@ -1,0 +1,12 @@
+# Build tooling & intermediates — not part of the shipped static site
+_gen_html.py
+data/_build_step1.py
+data/_assemble.py
+data/_source_exhibitors.json
+data/_t/
+
+# Local / editor cruft
+.playwright-mcp/
+__pycache__/
+*.pyc
+.DS_Store
