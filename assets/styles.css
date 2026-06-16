@@ -316,6 +316,21 @@ a { color:inherit; text-decoration:none; }
 .btn__badge { background:var(--on-primary); color:var(--primary); border-radius:var(--radius-lg);
   padding:1px 9px; font-size:.78rem; font-weight:700; }
 
+/* ---- GitHub star button (appbar) ---- */
+.gh-star { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:var(--radius-lg);
+  border:1px solid var(--outline-variant); background:var(--surface-container-high); color:var(--on-surface-variant);
+  font:inherit; font-size:.85rem; font-weight:600; line-height:1; cursor:pointer;
+  transition:background .15s,border-color .15s,color .15s,box-shadow .15s; }
+.gh-star:hover { background:var(--secondary-container); color:var(--on-secondary-container);
+  border-color:transparent; box-shadow:var(--elev-1); }
+.gh-star__mark { flex:0 0 auto; display:block; }
+.gh-star__icon { font-size:17px; color:#F5B301; }
+.gh-star__count { font-variant-numeric:tabular-nums; padding-left:2px; }
+@media (max-width:480px) {
+  .gh-star__label { display:none; }
+  .gh-star { padding:6px 10px; gap:5px; }
+}
+
 /* ---- Hero (composite home) ---- */
 .hero { background:linear-gradient(135deg,var(--primary-container),var(--secondary-container));
   border:1px solid var(--outline-variant); border-radius:var(--radius-lg);

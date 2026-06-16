@@ -14,7 +14,8 @@ window.SITE_META = {
   "subtitle": {
     "en": "AI caring for the nation's health — a shared, inclusive, better future.",
     "zh": "AI 照護國人健康．共生美好未來"
-  }
+  },
+  "repo": "tingwei161803/greater-south-ai-health"
 };
 
 window.SITE_PAGES = [

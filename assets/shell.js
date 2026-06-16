@@ -24,9 +24,10 @@
 
   /* ---------- chrome i18n (page content strings live in the data) ---------- */
   var I18N = {
-    en: { close: "Close", menu: "Pages", skip: "Skip to content" },
-    zh: { close: "關閉", menu: "頁面", skip: "跳到內容" }
+    en: { close: "Close", menu: "Pages", skip: "Skip to content", star: "Star", starAria: "Star this project on GitHub" },
+    zh: { close: "關閉", menu: "頁面", skip: "跳到內容", star: "給星", starAria: "在 GitHub 給這個專案星星" }
   };
+  var REPO = META.repo || "";   // "owner/name" → drives the GitHub star button
 
   /* ---------- sandbox-safe localStorage ---------- */
   function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
@@ -88,6 +89,21 @@
           '<span class="brand__name" id="brandName"></span>' +
         '</a>' +
         '<div class="appbar__actions">' +
+          (REPO ?
+            '<a class="gh-star" id="ghStar" href="https://github.com/' + REPO + '" ' +
+              'target="_blank" rel="noopener noreferrer">' +
+              '<svg class="gh-star__mark" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">' +
+                '<path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 ' +
+                '0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 ' +
+                '1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 ' +
+                '0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 ' +
+                '1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 ' +
+                '3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 ' +
+                '8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>' +
+              '<span class="material-symbols-rounded gh-star__icon" aria-hidden="true">star</span>' +
+              '<span class="gh-star__label" id="ghStarLabel"></span>' +
+              '<span class="gh-star__count" id="ghStarCount" hidden></span>' +
+            '</a>' : "") +
           '<button class="icon-btn" id="langToggle" type="button" title="Language" aria-label="Toggle language / 切換語言">' +
             '<span class="material-symbols-rounded">translate</span>' +
             '<span class="icon-btn__txt" id="langLabel">中</span>' +
@@ -175,7 +191,27 @@
     if (nav) nav.setAttribute("aria-label", ui("menu"));
     var dc = document.getElementById("dialogClose");
     if (dc) dc.setAttribute("aria-label", ui("close"));
+    var starLabel = document.getElementById("ghStarLabel");
+    if (starLabel) starLabel.textContent = ui("star");
+    var star = document.getElementById("ghStar");
+    if (star) { star.setAttribute("aria-label", ui("starAria")); star.setAttribute("title", ui("starAria")); }
     paintNav();
+  }
+
+  /* ---------- GitHub star count (public API, no auth, silent on failure) ---------- */
+  function loadStarCount() {
+    if (!REPO || typeof fetch !== "function") return;
+    var countEl = document.getElementById("ghStarCount");
+    if (!countEl) return;
+    fetch("https://api.github.com/repos/" + REPO, { headers: { Accept: "application/vnd.github+json" } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        if (!j || typeof j.stargazers_count !== "number") return;
+        var n = j.stargazers_count;
+        countEl.textContent = n >= 1000 ? (Math.round(n / 100) / 10) + "k" : String(n);
+        countEl.hidden = false;
+      })
+      .catch(function () { /* offline / rate-limited: leave the button without a count */ });
   }
 
   /* =======================================================================
@@ -230,6 +266,7 @@
     applyLangChrome();
     refreshChrome();
     wire();
+    loadStarCount();
     window.LDW.ready = true;
     document.dispatchEvent(new CustomEvent("ldw:shell-ready"));
   }
