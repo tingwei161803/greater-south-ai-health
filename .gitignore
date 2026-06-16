@@ -6,6 +6,7 @@ data/_source_exhibitors.json
 data/_t/
 
 # Local / editor cruft
+/*.png
 .playwright-mcp/
 __pycache__/
 *.pyc
