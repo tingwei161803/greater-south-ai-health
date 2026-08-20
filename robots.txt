@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://greater-south-ai-health.peteraim.com/sitemap.xml
