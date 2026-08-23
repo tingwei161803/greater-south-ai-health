@@ -6,15 +6,16 @@
    tiny toolkit on window.LDW that each page's app.js reuses.
 
    Loaded on EVERY page BEFORE app.js. It:
-     1. reads persisted lang/theme (localStorage, sandbox-safe),
+     1. reads the page's language from <html lang> and the theme from localStorage,
      2. injects app bar + nav + footer + dialog around <main id="page">,
-     3. wires the language / theme toggles,
+     3. points the language link at this same page in the other language,
      4. highlights the current page (from <body data-page="...">),
-     5. lets app.js register an onLang() callback so a language switch repaints
-        BOTH the chrome AND the page body — nothing is ever left in one language.
+     5. wires the theme toggle.
 
-   Cross-page persistence is automatic: lang/theme live in localStorage (an
-   origin-wide store), so navigating to another .html restores the same state.
+   Theme persists across pages via localStorage (an origin-wide store).
+   Language does not persist: it belongs to the URL — Chinese at the root,
+   English under /en/ — so every page shows the language its address promises,
+   to visitors and to crawlers alike.
    ========================================================================= */
 (function () {
   "use strict";
@@ -33,9 +34,39 @@
   function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* ignore */ } }
 
+  /* ---------- language: decided by the URL, never by localStorage ----------
+     Each page declares its own language in <html lang>; the English twin of
+     every page lives at the same filename under /en/. Reading a stored
+     preference here would override what the address says — and would leave
+     crawlers, which have no localStorage, permanently on the default. */
+  var TWIN_DIR = "/en";
+  var LANG_CODE = { zh: "zh-Hant", en: "en" };
+
+  function pageLang() {
+    var declared = (document.documentElement.getAttribute("lang") || "zh").toLowerCase();
+    return declared.indexOf("zh") === 0 ? "zh" : "en";
+  }
+  function inTwinDir() {
+    var p = location.pathname;
+    return p === TWIN_DIR || p.indexOf(TWIN_DIR + "/") === 0;
+  }
+  /* this same page in the other language — derived from the path, so adding a
+     page never means coming back here to add a link */
+  function otherLangHref() {
+    var p = location.pathname;
+    return inTwinDir() ? (p.slice(TWIN_DIR.length) || "/") : TWIN_DIR + p;
+  }
+  /* the data layer writes asset paths relative to the site root (logos live at
+     assets/logos/…). The English pages sit one level below it, so those paths
+     need a hop up — otherwise every logo under /en/ is a 404. */
+  function asset(path) {
+    if (!path || path.charAt(0) === "/" || /^(?:[a-z][a-z0-9+.-]*:)?\/\//i.test(path)) return path;
+    return inTwinDir() ? "../" + path : path;
+  }
+
   /* ---------- global state ---------- */
   var state = {
-    lang:  lsGet("lang")  || "en",
+    lang:  pageLang(),
     theme: lsGet("theme") || "light"
   };
 
@@ -60,10 +91,6 @@
     for (var i = 0; i < PAGES.length; i++) if (PAGES[i].slug === slug) return PAGES[i];
     return PAGES[0] || null;
   }
-
-  /* ---------- onLang callback registry (app.js plugs in here) ---------- */
-  var langSubscribers = [];
-  function onLang(fn) { if (typeof fn === "function") langSubscribers.push(fn); }
 
   /* =======================================================================
      CHROME INJECTION — app bar, nav, footer, dialog around <main id="page">
@@ -104,10 +131,12 @@
               '<span class="gh-star__label" id="ghStarLabel"></span>' +
               '<span class="gh-star__count" id="ghStarCount" hidden></span>' +
             '</a>' : "") +
-          '<button class="icon-btn" id="langToggle" type="button" title="Language" aria-label="Toggle language / 切換語言">' +
+          '<a class="icon-btn" id="langToggle" href="' + otherLangHref() + '"' +
+             ' rel="alternate" hreflang="' + LANG_CODE[state.lang === "zh" ? "en" : "zh"] + '"' +
+             ' title="Language / 語言" aria-label="Switch language / 切換語言">' +
             '<span class="material-symbols-rounded">translate</span>' +
-            '<span class="icon-btn__txt" id="langLabel">中</span>' +
-          '</button>' +
+            '<span class="icon-btn__txt" id="langLabel"></span>' +
+          '</a>' +
           '<button class="icon-btn" id="themeToggle" type="button" title="Theme" aria-label="Toggle theme / 切換主題">' +
             '<span class="material-symbols-rounded" id="themeIcon">dark_mode</span>' +
           '</button>' +
@@ -181,13 +210,16 @@
     }
   }
 
-  /* ---------- chrome text in the active language ---------- */
+  /* ---------- chrome text in the page's language ---------- */
   function refreshChrome() {
-    document.documentElement.setAttribute("lang", state.lang);
     var page = currentPage();
     var siteTitle = t(META.title);
     var pageTitle = page ? t(page.title) : "";
-    document.title = pageTitle ? pageTitle + " · " + siteTitle : siteTitle;
+    /* the home page is titled after the site, so appending the site name again
+       would just say the same thing twice */
+    document.title = (pageTitle && pageTitle !== siteTitle)
+      ? pageTitle + " · " + siteTitle
+      : siteTitle;
 
     var brand = document.getElementById("brandName");
     if (brand) brand.textContent = siteTitle;
@@ -231,22 +263,20 @@
     if (icon) icon.textContent = state.theme === "dark" ? "light_mode" : "dark_mode";
     lsSet("theme", state.theme);
   }
+  /* the language control is a link, so its label names where it goes rather
+     than where you already are */
   function applyLangChrome() {
     var label = document.getElementById("langLabel");
-    if (label) label.textContent = state.lang === "en" ? "EN" : "中";
-    lsSet("lang", state.lang);
+    if (!label) return;
+    var other = state.lang === "zh" ? "en" : "zh";
+    label.textContent = other === "zh" ? "中" : "EN";
+    label.setAttribute("lang", LANG_CODE[other]);
   }
 
   function wire() {
     document.getElementById("themeToggle").addEventListener("click", function () {
       state.theme = state.theme === "dark" ? "light" : "dark";
       applyTheme();
-    });
-    document.getElementById("langToggle").addEventListener("click", function () {
-      state.lang = state.lang === "en" ? "zh" : "en";
-      applyLangChrome();
-      refreshChrome();
-      langSubscribers.forEach(function (fn) { try { fn(state.lang); } catch (e) {} });
     });
   }
 
@@ -257,10 +287,10 @@
     ready: false,          // flipped true once the chrome (incl. #dialog) is injected
     state: state,
     t: t, ui: ui, escapeHtml: escapeHtml, r: r,
+    asset: asset,
     lsGet: lsGet, lsSet: lsSet,
     pages: PAGES, meta: META,
     currentPage: currentPage, currentSlug: currentSlug, pageHref: pageHref,
-    onLang: onLang,
     refreshChrome: refreshChrome,
     dialog: function () { return document.getElementById("dialog"); }
   };
